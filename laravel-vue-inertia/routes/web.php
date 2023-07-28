@@ -66,21 +66,34 @@ Route::middleware(['auth'])->group(function () {
         return to_route('users.index');
     });
 
-    Route::get('/users/edit', function () {
-        return Inertia::render('Users/Edit');
+    Route::get('/users/{id}/edit', function ($id) {
+        $user = User::find($id);
+        return Inertia::render('Users/Edit', [
+            'user' => $user
+        ]);
     })->name('users.edit');
 
-    Route::put('/users/update', function () {
-        $user = Request::validate([
+    Route::put('/users/{id}/update', function () {
+        $user = null;
+        $id = Request::input('id');
+        $request = Request::validate([
+            'id' => ['required', 'integer', function ($attribute, $value, $fail) use (&$user) {
+                $user = User::find($value);
+            }],
             'name' => ['required', 'max:50', 'string'],
-            'email' => ['required', 'max:50', 'email', 'unique:users'],
+            'email' => ['required', 'max:50', 'email', 'unique:users,email,' . $id],
             'password' => ['required', 'max:14', 'string'],
         ]);
 
-        User::create($user);
+        if ($user) {
+            $user->name = $request['name'];
+            $user->email = $request['email'];
+            $user->password = $request['password'];
+            $user->save();
+        }
 
         return to_route('users.index');
-    });
+    })->name('users.update');
 
     Route::get('/settings', function () {
         return Inertia::render('Settings');
